@@ -1,0 +1,66 @@
+data<-exce_data
+library(dplyr)
+library(tidyr)
+names(data)
+str(data)
+# Load necessary libraries
+library(readxl)
+library(dplyr)
+
+# Read the Excel file
+data <- read_excel("exce_data.xlsx", sheet = "Tabelle1")
+
+# Rename the columns
+colnames(data) <- c("Enabling_Factor", "Limiting_Factor", 
+                    "Participant_1", "Participant_2", "Participant_3", "Participant_4", 
+                    "Participant_5", "Participant_6", "Participant_7", "Participant_8", 
+                    "Participant_9", "Participant_10", "Sum_1", "Sum_0")
+
+# View the data
+print(data)
+
+# Create a list of all factors
+all_factors <- unique(c(data$Enabling_Factor, data$Limiting_Factor))
+
+# Initialize a data frame to store factor frequencies and sums
+factor_summary <- data.frame(Factor = all_factors, Frequency = 0, Sum_1 = 0, Sum_0 = 0)
+
+# Calculate frequency and sums for each factor
+for (i in 1:nrow(data)) {
+  enabling_factor <- data$Enabling_Factor[i]
+  limiting_factor <- data$Limiting_Factor[i]
+  
+  factor_summary$Frequency[factor_summary$Factor == enabling_factor] <- 
+    factor_summary$Frequency[factor_summary$Factor == enabling_factor] + 1
+  factor_summary$Frequency[factor_summary$Factor == limiting_factor] <- 
+    factor_summary$Frequency[factor_summary$Factor == limiting_factor] + 1
+  
+  factor_summary$Sum_1[factor_summary$Factor == enabling_factor] <- 
+    factor_summary$Sum_1[factor_summary$Factor == enabling_factor] + data$Sum_1[i]
+  factor_summary$Sum_0[factor_summary$Factor == enabling_factor] <- 
+    factor_summary$Sum_0[factor_summary$Factor == enabling_factor] + data$Sum_0[i]
+  
+  factor_summary$Sum_1[factor_summary$Factor == limiting_factor] <- 
+    factor_summary$Sum_1[factor_summary$Factor == limiting_factor] + data$Sum_0[i]
+  factor_summary$Sum_0[factor_summary$Factor == limiting_factor] <- 
+    factor_summary$Sum_0[factor_summary$Factor == limiting_factor] + data$Sum_1[i]
+}
+
+# Calculate the weighted importance
+factor_summary <- factor_summary %>%
+  mutate(Weighted_Importance = (Sum_1 - Sum_0) / Frequency)
+
+# Normalize the weights
+factor_summary <- factor_summary %>%
+  mutate(Normalized_Weight = Weighted_Importance / sum(abs(Weighted_Importance)))
+
+# View the results
+print(factor_summary)
+
+library(ggplot2)
+
+# Plot the normalized weights
+ggplot(factor_summary, aes(x = reorder(Factor, -Normalized_Weight), y = Normalized_Weight)) +
+  geom_bar(stat = "identity") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(title = "Normalized Weights of Factors", x = "Factor", y = "Normalized Weight")
